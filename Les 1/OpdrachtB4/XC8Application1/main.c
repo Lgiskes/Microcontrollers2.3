@@ -28,13 +28,13 @@ notes:			Busy wait, not very accurate. Make sure (external)
 
 int main(void)
 {
-	DDRD = 0xFF;
-	int lightOnCode = 0b00000001;
+	DDRD = 0xFF; //Port D is all output
+	int lightOnCode = 0b00000001; //the code of lights that should be turned on
     while(1)
     {
-		PORTD = lightOnCode;
-		lightOnCode = lightOnCode << 1;
-		if(lightOnCode>0x80){
+		PORTD = lightOnCode; //turns the light on according to the code
+		lightOnCode = lightOnCode << 1;//shifts the active light
+		if(lightOnCode>0x80){ //if the lightcode is bigger than the amount of lights, reset it
 			lightOnCode = 0x01;
 		}
 		wait(50);

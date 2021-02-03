@@ -19,17 +19,17 @@ void wait(int msec){
 
 int main(void)
 {
-	DDRD = 0b01100000;
+	DDRD = 0b01100000; //set the 6th and 7th led out output
 	PORTD = 0x00; //turn all off
-	PORTD = 0b01000000; //turn 7 on
+	PORTD = 0b01000000; //turn 7th on
 	
     while(1)
     {
 		wait(500);
-		PORTD = PORTD ^ (1<<6); //switch 7
-		PORTD = PORTD ^ (1<<5);	//switch 6
+		PORTD = PORTD ^ (1<<6); //switch 7th
+		PORTD = PORTD ^ (1<<5);	//switch 6th
 		
-        //TODO:: Please write your application code 
+       
 		
     }
 }
