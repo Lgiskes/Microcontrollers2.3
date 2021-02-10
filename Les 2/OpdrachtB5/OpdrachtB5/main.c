@@ -19,13 +19,12 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
+#include "main.h"
 
 #define LCD_E 	6  // RA6 UNI-6
 #define LCD_RS	4  // RA4 UNI-6
 
 void lcd_strobe_lcd_e(void);
-void init_4bits_mode(void);
-void lcd_write_string(const char *str);
 void lcd_write_data(unsigned char byte);
 void lcd_write_cmd(unsigned char byte);
 void lcd_clear(void);
@@ -69,7 +68,7 @@ outputs:
 notes:			According datasheet HD44780 table 12
 Version :    	DMK, Initial code
 *******************************************************************/
-void init_4bits_mode(void) {
+void init(void) {
 	// PORTC output mode and all low (also E and RS pin)
 	DDRD = 0xFF;
 	DDRA = 0xFF;
@@ -107,7 +106,7 @@ outputs:
 notes:			According datasheet HD44780 table 12
 Version :    	DMK, Initial code
 *******************************************************************/
-void lcd_write_string(const char *str) {
+void display_text(const char *str) {
 	// Het kan met een while:
 
 	// while(*str) {
@@ -166,6 +165,22 @@ void lcd_clear() {
 	lcd_write_command (0x80);						//Cursor terug naar start
 }
 
+void set_cursor(int position){
+	if(position >= 0 && position <= 15){
+		position += 0x80;
+		lcd_write_command(position);
+	}
+	else{
+		if(position >= 16 && position <= 31){
+			position+=0x80+48;
+			lcd_write_command(position);
+		}
+	}
+	
+	
+	
+}
+
 
 /******************************************************************
 short:			main() loop, entry point of executable
@@ -180,18 +195,26 @@ int main( void ) {
 	PORTC = 0xFF;
 
 	// Init LCD
-	init_4bits_mode();
+	init();
 	
 	_delay_ms(10);
 	
 	lcd_clear();
 	
-	lcd_write_command(0x1C);
 	_delay_ms(10);
 	
-	
 	// Write sample string
-	lcd_write_string("Hello world!");
+	display_text("Hello world!");
+	wait(5);
+
+
+	wait(3000);
+	lcd_clear();
+	wait(5);
+//	set_cursor(16);
+	wait(5);
+	display_text("Ben display");
+	wait(5);
 	
 	// Loop forever
 	while (1) {
