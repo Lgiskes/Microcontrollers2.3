@@ -11,6 +11,7 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #define BIT(x)	(1 << (x))
 #define LCD_E 	6  // RA6 UNI-6
@@ -30,29 +31,20 @@ void wait( int ms ) {
 	}
 }
 
-char * toArray(int number)
-{
-    int n = log10(number) + 1;
-    int i;
-    char *numberArray = calloc(n, sizeof(char));
-    for (i = n-1; i >= 0; --i, number /= 10)
-    {
-        numberArray[i] = (number % 10) + '0';
-    }
-    return numberArray;
-}
-
 int main(void)
 {
 	DDRD &= ~BIT(7);
-	PORTC = 0xFF;
+	//PORTC = 0xFF;
+	DDRC = 0xFF;
 	DDRB = 0xFF;
 	
 	TCCR2 = 0b00000111;
 	init();
 	wait(10);
 	int oldCounter = 0;
-	//int passedHundred = 0;
+	int passedHundred = 0;
+	char newChar[17];
+	
 	oldCounter = TCNT2;
 	
 	lcd_clear();
@@ -60,21 +52,21 @@ int main(void)
 	
 	set_cursor(0);
 	wait(5);
-	display_text(toArray(oldCounter));
+	sprintf(newChar, "%d", oldCounter);
+	display_text(newChar);
 	wait(5);
 	while(1)
 	{
-		//TODO:: Please write your application code
 		if (oldCounter != TCNT2) {
-			/*if (TCNT2 == 100)
-			{
+			if (TCNT2 == 100){
 				passedHundred++;
 				TCNT2 = 0;
-			}*/
+			}
 			oldCounter = TCNT2;
 			lcd_clear();
 			wait(5);
-			display_text(toArray(oldCounter));
+			sprintf(newChar, "%d", (passedHundred * 100) + oldCounter);
+			display_text(newChar);
 			wait(5);
 		}
 		PORTB = TCNT2;
