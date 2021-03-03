@@ -38,7 +38,7 @@ void wait( int ms )
 // Initialize ADC: 10-bits (left justified), free running
 void adcInit( void )
 {
-	ADMUX = 0b11100001;			// AREF=2,56, result left adjusted, channel 1 at pin PF1
+	ADMUX = 0b01100001;			// AREF=2,56, result left adjusted, channel 1 at pin PF1
 	ADCSRA = 0b11100110;		// ADC-enable, no interrupt, start, free running, division by 64
 }
 
@@ -47,15 +47,15 @@ void adcInit( void )
 int main( void )
 {
 	DDRF = 0x00;				// set PORTF for input (ADC)
-	DDRA = 0xFF;				// set PORTA for output 
+	DDRD = 0xFF;				// set PORTA for output 
 	DDRB = 0xFF;
 	adcInit();					// initialize ADC
 	init();
 
 	while (1)
 	{
-		PORTA = ADCH;
-		int graden = ADCH>>2;
+		PORTD = ADCH;
+		int graden = ADCH;
 		lcd_clear();
 		wait(5);
 		char gradenBuffer[20];
