@@ -39,7 +39,7 @@ ISR (INT0_vect){
 
 // Initialize ADC: 8-bits (left justified), no free running
 void adcInit( void ) {
-	ADMUX = 0b01101101;			// AREF=VCC, result left adjusted, positive channel3 at pin PF3, negative channel2 at pinPF2, Gain 10x
+	ADMUX = 0b01100011;			// AREF=VCC, result left adjusted, positive channel3 at pin PF3, negative channel2 at pinPF2, Gain 10x
 	ADCSRA = 0b11000110;		// ADC-enable, no interrupt, start, no free running, division by 64
 }
 
@@ -47,7 +47,7 @@ void adcInit( void ) {
 // Main program: ADC at PF1
 int main( void ) {
 	DDRF = 0x00;					// set PORTF for input (ADC)
-	DDRA = 0xFF;					// set PORTA for output
+	DDRA = 0xFF;
 	
 	EICRA |= 0b00000011;
 	EIMSK |= 0x01;
