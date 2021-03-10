@@ -132,9 +132,9 @@ int main()
 	}
 	wait(1000);
 	
-	spi_writeWord("56 8123");
-	wait(1000);
-	spi_writeWord("12345678");
+	spi_writeWord("11223344");
+	wait(2000);
+	spi_writeWord("88776655");
 
 	
 	
