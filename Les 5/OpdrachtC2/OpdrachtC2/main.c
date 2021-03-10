@@ -23,7 +23,7 @@
 #define SPI_MOSI 2 // PB2: spi Pin MOSI
 #define SPI_MISO 3 // PB3: spi Pin MISO
 #define SPI_SS 0 // PB0: spi Pin Slave Select
-#define SPI_DISPLAY_USED 8
+#define SPI_DISPLAY_USED 4
 
 void spi_writeLetter(unsigned char adress, unsigned char data);
 void spi_writeWord(const char data[]);
@@ -77,8 +77,8 @@ void displayDriverInit()
 	spi_slaveDeSelect(0); // Deselect display chip
 	
 	spi_slaveSelect(0); // Select dispaly chip
-	spi_write(0x0F); // Register 0A: Intensity
-	spi_write(0x01); // -> Level 4 (in range [1..F])
+	spi_write(0x0A); // Register 0A: Intensity
+	spi_write(0x04); // -> Level 4 (in range [1..F])
 	spi_slaveDeSelect(0); // Deselect display chip
 	
 	spi_slaveSelect(0); // Select display chip
@@ -125,9 +125,18 @@ void spi_writeWord(const char data[]){
 
 void spi_writePositiveInteger(int value){
 	if (value >= 0 && value <= 9999){
+		/*
 		char buffer[4];
 		sprintf(buffer, "%i", value);
 		spi_writeWord(buffer);
+		*/
+		int singleDigit;
+		for(int i = 0; i< 4; i++){
+			singleDigit = value%10;
+			value = value/10;
+			spi_writeLetter(i+1, singleDigit);
+		}
+		
 	} else {
 		for (int i = 0; i < 4; i++){
 			spi_writeLetter(4 - i, 0);	
@@ -136,7 +145,13 @@ void spi_writePositiveInteger(int value){
 }
 
 void spi_clear(){
-	
+		for (char i =1; i<=SPI_DISPLAY_USED; i++)
+		{
+			spi_slaveSelect(0); // Select display chip
+			spi_write(i); // digit adress: (digit place)
+			spi_write(0); // digit value: 0
+			spi_slaveDeSelect(0); // Deselect display chip
+		}
 }
 
 int main()
@@ -145,17 +160,11 @@ int main()
 	spi_masterInit(); // Initialize spi module
 	displayDriverInit(); // Initialize display chip
 	// clear display (all zero's)
-	for (char i =1; i<=SPI_DISPLAY_USED; i++)
-	{
-		spi_slaveSelect(0); // Select display chip
-		spi_write(i); // digit adress: (digit place)
-		spi_write(0); // digit value: 0
-		spi_slaveDeSelect(0); // Deselect display chip
-	}
+	spi_clear();
 	wait(1000);
-	spi_writeWord("11223344");
+	//spi_writeWord("11223344");
 	
-	/*spi_writePositiveInteger(1578);
+	spi_writePositiveInteger(1578);
 	wait(2000);
 	spi_clear();
 	spi_writePositiveInteger(150);
@@ -164,7 +173,10 @@ int main()
 	spi_writePositiveInteger(0);
 	wait(2000);
 	spi_clear();
-	spi_writePositiveInteger(-125);	*/
+	spi_writePositiveInteger(-125);	
+		wait(2000);
+		spi_clear();
+		spi_writePositiveInteger(1);
 	
 	// write 4-digit data
 	/*
