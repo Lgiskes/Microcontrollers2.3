@@ -21,6 +21,10 @@
 #define SPI_MOSI 2 // PB2: spi Pin MOSI
 #define SPI_MISO 3 // PB3: spi Pin MISO
 #define SPI_SS 0 // PB0: spi Pin Slave Select
+#define SPI_DISPLAY_USED 8
+
+void spi_writeLetter(unsigned char adress, unsigned char data);
+void spi_writeWord(const char data[]);
 
 // wait(): busy waiting for 'ms' millisecond - used library: util/delay.h
 void wait(int ms)
@@ -75,7 +79,7 @@ void displayDriverInit()
 	spi_slaveDeSelect(0); // Deselect display chip
 	spi_slaveSelect(0); // Select display chip
 	spi_write(0x0B); // Register 0B: Scan-limit
-	spi_write(0x03); // -> 3 = Display digits 0..3
+	spi_write(SPI_DISPLAY_USED - 1); // -> 3 = Display digits 0..3
 	spi_slaveDeSelect(0); // Deselect display chip
 	spi_slaveSelect(0); // Select display chip
 	spi_write(0x0C); // Register 0B: Shutdown register
@@ -98,13 +102,28 @@ void displayOff()
 	spi_write(0x00); // -> 1 = Normal operation
 	spi_slaveDeSelect(0); // Deselect display chip
 }
+
+void spi_writeLetter(unsigned char adress, unsigned char data){
+	spi_slaveSelect(0);
+	spi_write(adress);
+	spi_write(data);
+	spi_slaveDeSelect(0);
+}
+
+void spi_writeWord(const char data[]){
+	int displayIndex;
+	for(int i = 0; i< SPI_DISPLAY_USED; i++){
+		displayIndex = SPI_DISPLAY_USED - i;
+		spi_writeLetter(displayIndex, data[i]);
+	}
+}
 int main()
 {
 	DDRB=0x01; // Set PB0 pin as output for display select
 	spi_masterInit(); // Initialize spi module
 	displayDriverInit(); // Initialize display chip
 	// clear display (all zero's)
-	for (char i =1; i<=4; i++)
+	for (char i =1; i<=SPI_DISPLAY_USED; i++)
 	{
 		spi_slaveSelect(0); // Select display chip
 		spi_write(i); // digit adress: (digit place)
@@ -113,13 +132,16 @@ int main()
 	}
 	wait(1000);
 	
+	spi_writeWord("56 8123");
+	wait(1000);
+	spi_writeWord("12345678");
 
 	
 	
 	
-	
 	// write 4-digit data
-	for (char i =1; i<=4; i++)
+	/*
+	for (char i =1; i<=SPI_DISPLAY_USED; i++)
 	{
 		spi_slaveSelect(0); // Select display chip
 		spi_write(i); // digit adress: (digit place)
@@ -127,6 +149,8 @@ int main()
 		spi_slaveDeSelect(0); // Deselect display chip
 		wait(1000);
 	}
+	*/
+	
 	wait(1000);
 	
 	spi_slaveSelect(0);
