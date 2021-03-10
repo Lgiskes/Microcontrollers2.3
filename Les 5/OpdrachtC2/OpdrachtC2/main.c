@@ -27,6 +27,7 @@
 
 void spi_writeLetter(unsigned char adress, unsigned char data);
 void spi_writeWord(const char data[]);
+void spi_writePositiveInteger(int);
 
 // wait(): busy waiting for 'ms' millisecond - used library: util/delay.h
 void wait(int ms)
@@ -123,6 +124,27 @@ void spi_writeWord(const char data[]){
 	}
 }
 
+void spi_writeInteger(int value){
+	if (value >= 0 && value <= 9999){
+		spi_writePositiveInteger(value);
+		return;
+	}else if(value < 0 && value > -1000){
+		spi_writeLetter(4, 0x0A); //write minus sign
+		value = value * -1;
+		int singleDigit;
+		for(int i = 0; i< 3; i++){
+			singleDigit = value%10;
+			value = value/10;
+			spi_writeLetter(i+1, singleDigit);
+		}
+	}
+	 else {
+		for (int i = 0; i < 4; i++){
+			spi_writeLetter(4 - i, 0x0A);	//fill with minus signs
+		}
+	}
+}
+
 void spi_writePositiveInteger(int value){
 	if (value >= 0 && value <= 9999){
 		/*
@@ -137,9 +159,9 @@ void spi_writePositiveInteger(int value){
 			spi_writeLetter(i+1, singleDigit);
 		}
 		
-	} else {
+	}else {
 		for (int i = 0; i < 4; i++){
-			spi_writeLetter(4 - i, 0);	
+			spi_writeLetter(4 - i, 0x2D);	
 		}
 	}
 }
@@ -164,19 +186,19 @@ int main()
 	wait(1000);
 	//spi_writeWord("11223344");
 	
-	spi_writePositiveInteger(1578);
+	spi_writeInteger(1578);
 	wait(2000);
 	spi_clear();
-	spi_writePositiveInteger(150);
-	wait(2000);
-	spi_clear();
-	spi_writePositiveInteger(0);
-	wait(2000);
-	spi_clear();
-	spi_writePositiveInteger(-125);	
+		spi_writeInteger(-6723);
 		wait(2000);
 		spi_clear();
-		spi_writePositiveInteger(1);
+			spi_writeInteger(-327);
+			wait(2000);
+			spi_clear();
+				spi_writeInteger(0);
+				wait(2000);
+				spi_clear();
+
 	
 	// write 4-digit data
 	/*
