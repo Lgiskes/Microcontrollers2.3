@@ -5,6 +5,7 @@
 #include <avr/interrupt.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 
 #define BIT(x)	(1 << (x))
 #define LCD_E 	6  // RA6 UNI-6
@@ -18,9 +19,23 @@ void display_text(const char *str);
 void set_cursor(int position);
 void lcd_init(void);
 
-int distance0;
-int distance1;
+int hertz_percentage;
+int vibrato_percentage;
 int measuring = 0;
+int hertz_value;
+int average_percentages_hertz[10];
+int bufferList[10];
+
+ISR (TIMER2_COMP_vect){
+	PORTG ^= BIT(0);
+}
+
+void timer2Init( void ){
+	OCR2 = 250;
+	TIMSK |= BIT(7);
+	sei();
+	TCCR2 = 0b00001011;
+}
 
 void wait( int ms )
 {
@@ -30,11 +45,60 @@ void wait( int ms )
 	}
 }
 
-// Initialize ADC: 8-bits (left justified), free running
+void addToList(int *list_to_add[], int value){
+		if (list_to_add[0] == NULL){
+			list_to_add[0] = value;
+			return;
+		}
+		int elementAmount = sizeof(list_to_add)/sizeof(list_to_add[0]);
+		if(elementAmount < 10){
+			list_to_add[elementAmount] = value;
+			return;
+		} else {
+			for (int i = 0; i < 10; i++){
+				bufferList[i] = list_to_add[i];
+			}
+			for (int i = 0; i < 9; i++){
+				list_to_add[i] = bufferList[i + 1];
+			}
+			list_to_add[9] = value;
+		}
+		
+}
+
+int average_of_list(int *list_to_average){
+	if (list_to_average[0] == NULL){
+		return 0;
+	} 
+	int size = sizeof(list_to_average) / sizeof(list_to_average[0]);
+	int sum = 0;
+	for (int i = 0; i < size; i++){
+		sum += list_to_average[i];
+	}
+	return sum / size;
+}
+
+// Initialize ADC: 8-bits (left justified), single entry mode
 void adcInit( void )
 {
 	ADMUX = 0b01100001;			// AREF=VCC, result left adjusted, channel 1 at pin PF1
-	ADCSRA = 0b11000110;		// ADC-enable, no interrupt, start, free running, division by 64
+	ADCSRA = 0b11000110;		// ADC-enable, no interrupt, start, single entry mode, division by 64
+}
+
+int returnDistance(int distance){
+	int value = 0;
+	if (distance < 0){
+		value = 0;
+	} else if(distance > 100){
+		value = 100;
+	} else{
+		value = distance;
+	}
+	return value;
+}
+
+int returnFrequency(int value){
+	return (int)(pow(2, (double)(value - 49) / 12.0) * 440);
 }
 
 // Main program: ADC at PF1
@@ -42,34 +106,39 @@ int main( void )
 {
 	DDRF = 0x00;				// set PORTF for input (ADC)
 	DDRD = 0xFF;				// set PORTD for output
+	DDRG = 0xFF;				// set PORTG for output
 	adcInit();					// initialize ADC
-	lcd_init();					// initialize LCD
+	//lcd_init();					// initialize LCD
+	timer2Init();
 
 	while (1){
 		PORTD = ADCH;
-		char distance_buffer0[20];
-		char distance_buffer1[20];
+		char hertz_buffer[20];
+		char vibrato_buffer1[20];
 		while(ADCSRA &BIT(6));
 		ADMUX ^= BIT(1);
 		ADCSRA |= BIT(6);
 		measuring ^= 1;
 		if (measuring){
-			distance1 = ADCH;
-			sprintf(distance_buffer0, "Distance: %i", distance1);
+			hertz_percentage = returnDistance(140-ADCH);
+			addToList(&average_percentages_hertz, hertz_percentage);
+			hertz_value = returnFrequency(average_of_list(&average_percentages_hertz));
+			OCR2 = 250000/(2*hertz_value);
+			sprintf(hertz_buffer, "Hertz: %i", hertz_value);
 			} else {
-			distance0 = ADCH;
-			sprintf(distance_buffer1, "Distance: %i", distance0);
+			vibrato_percentage = returnDistance(140-ADCH);
+			sprintf(vibrato_buffer1, "Distance: %i", vibrato_percentage);
 		}
-		lcd_clear();
+		/*lcd_clear();
 		wait(5);
 		set_cursor(0);
 		wait(5);
-		display_text(distance_buffer0);
+		display_text(vibrato_buffer1);
 		wait(5);
 		set_cursor(16);
 		wait(5);
-		display_text(distance_buffer1);
-		wait(500);
+		display_text(hertz_buffer);
+		wait(250);*/
 	}
 }
 
