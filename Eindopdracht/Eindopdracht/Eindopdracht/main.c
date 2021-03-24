@@ -35,16 +35,17 @@ double currentPercentage = 100;
 int goingLowToHigh = 1;
 int currentHertz = 0;
 
+//sets the buzzer high and low
 ISR (TIMER2_COMP_vect){
 	PORTG ^= BIT(0);
 }
 
 
 void timersInit( void ){
-	OCR2 = 250;
+	OCR2 = 250; //standard time
 	TIMSK |= BIT(7);
 	sei();
-	TCCR2 = 0b00001011;
+	TCCR2 = 0b00001011; //interrupt enable, prescaler 64x
 }
 
 
@@ -56,14 +57,12 @@ void wait( int ms )
 	}
 }
 
+/*
+Adds an item to an existing list
+int list_to_add[]:	The list where the item is added to
+int value:			The value to be added to the list
+*/
 void addToList(int list_to_add[], int value){
-	/*
-		if (list_to_add[0] == NULL){
-			list_to_add[0] = value;
-			return;
-		}
-		*/
-		//int elementAmount = sizeof(list_to_add)/sizeof(list_to_add[0]);
 		int elementAmount = 10;
 		if(elementAmount < 10){
 			list_to_add[elementAmount] = value;
@@ -79,14 +78,13 @@ void addToList(int list_to_add[], int value){
 		}
 		
 }
+/*
+Returns the avarage value of the items in an existing list
+int list_to_avarage[]:	The list which avarage is to be calculated
+int return:				The avarage value of the list
+*/
 
 int average_of_list(int list_to_average[]){
-	/*
-	if (list_to_average[0] == NULL){
-		return 0;
-	} 
-	*/
-	//int size = sizeof(list_to_average[]) / sizeof(list_to_average[0]);
 	int size = 10;
 	int sum = 0;
 	for (int i = 0; i < size; i++){
@@ -102,6 +100,7 @@ void adcInit( void )
 	ADCSRA = 0b11000110;		// ADC-enable, no interrupt, start, single entry mode, division by 64
 }
 
+// interpolates the value between 0 and 100
 int returnDistance(int distance){
 	int value = 0;
 	if (distance < 0){
@@ -114,12 +113,13 @@ int returnDistance(int distance){
 	return value;
 }
 
+//Returns the frequency 
 int returnFrequency(int value){
 	return (int)(pow(2, (double)(value - 49) / 12.0) * 440);
 }
 
 int percentageToKey(int percentage){
-	return 30 + (percentage/5); //range from key 30 to 50
+	return 40 + (percentage/10); //range from key 40 to 50
 }
 
 void setVibratoRange(int vibrato_percentage){
@@ -186,7 +186,7 @@ int main( void )
 			setVibratoRange(average_of_list( average_percentages_vibrato));
 			sprintf(vibrato_buffer1, "Vibrato: %i", average_of_list(average_percentages_vibrato));
 			calculateFrequency();
-			OCR2 = 250000/(2*currentHertz);
+			OCR2 = (250000)/(2*currentHertz);
 		}
 		
 		
@@ -202,6 +202,7 @@ int main( void )
 		display_text(hertz_buffer);
 		wait(250);
 		*/
+		
 		
 		
 	}
