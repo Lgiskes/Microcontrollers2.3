@@ -23,7 +23,7 @@ int hertz_percentage;
 int vibrato_percentage;
 int measuring = 0;
 int hertz_value;
-int average_percentages_hertz[10];
+int average_percentages_hertz[10] = {0,0,0,0,0,0,0,0,0,0};
 int bufferList[10];
 
 ISR (TIMER2_COMP_vect){
@@ -45,12 +45,15 @@ void wait( int ms )
 	}
 }
 
-void addToList(int *list_to_add[], int value){
+void addToList(int list_to_add[], int value){
+	/*
 		if (list_to_add[0] == NULL){
 			list_to_add[0] = value;
 			return;
 		}
-		int elementAmount = sizeof(list_to_add)/sizeof(list_to_add[0]);
+		*/
+		//int elementAmount = sizeof(list_to_add)/sizeof(list_to_add[0]);
+		int elementAmount = 10;
 		if(elementAmount < 10){
 			list_to_add[elementAmount] = value;
 			return;
@@ -66,11 +69,14 @@ void addToList(int *list_to_add[], int value){
 		
 }
 
-int average_of_list(int *list_to_average){
+int average_of_list(int list_to_average[]){
+	/*
 	if (list_to_average[0] == NULL){
 		return 0;
 	} 
-	int size = sizeof(list_to_average) / sizeof(list_to_average[0]);
+	*/
+	//int size = sizeof(list_to_average[]) / sizeof(list_to_average[0]);
+	int size = 10;
 	int sum = 0;
 	for (int i = 0; i < size; i++){
 		sum += list_to_average[i];
@@ -101,6 +107,10 @@ int returnFrequency(int value){
 	return (int)(pow(2, (double)(value - 49) / 12.0) * 440);
 }
 
+int percentageToKey(int percentage){
+	return 30 + (percentage/5); //range from key 30 to 50
+}
+
 // Main program: ADC at PF1
 int main( void )
 {
@@ -121,15 +131,16 @@ int main( void )
 		measuring ^= 1;
 		if (measuring){
 			hertz_percentage = returnDistance(140-ADCH);
-			addToList(&average_percentages_hertz, hertz_percentage);
-			hertz_value = returnFrequency(average_of_list(&average_percentages_hertz));
+			addToList(average_percentages_hertz, hertz_percentage);
+			hertz_value = returnFrequency(percentageToKey( average_of_list(average_percentages_hertz)));
 			OCR2 = 250000/(2*hertz_value);
 			sprintf(hertz_buffer, "Hertz: %i", hertz_value);
 			} else {
 			vibrato_percentage = returnDistance(140-ADCH);
 			sprintf(vibrato_buffer1, "Distance: %i", vibrato_percentage);
 		}
-		/*lcd_clear();
+		/*
+		lcd_clear();
 		wait(5);
 		set_cursor(0);
 		wait(5);
@@ -138,7 +149,9 @@ int main( void )
 		set_cursor(16);
 		wait(5);
 		display_text(hertz_buffer);
-		wait(250);*/
+		wait(250);
+		*/
+		
 	}
 }
 
