@@ -22,18 +22,18 @@ void set_cursor(int position);
 void lcd_init(void);
 void calculateFrequency(void);
 
-int hertz_percentage;
-int vibrato_percentage;
-int measuring = 0;
-int hertz_value;
-int average_percentages_hertz[10] = {0,0,0,0,0,0,0,0,0,0};
-int average_percentages_vibrato[10] = {0,0,0,0,0,0,0,0,0,0};
-int bufferList[10];
-double upperVibratoPercentage = 100;
-double lowerVibratoPercentage = 100;
-double currentPercentage = 100;
-int goingLowToHigh = 1;
-int currentHertz = 0;
+int hertz_percentage;											//Last converted percentage of the hertz distance sensor
+int vibrato_percentage;											//Last converted percentage of the vibrato sensor
+int measuring = 0;												//Boolean; true if measuring from the hertz distance sensor, false measuring the vibrato distance sensor
+int hertz_value;												//The last converted hertz value, no vibrato added
+int average_percentages_hertz[10] = {0,0,0,0,0,0,0,0,0,0};		//List of the last 10 measurements of the hertz distance meter
+int average_percentages_vibrato[10] = {0,0,0,0,0,0,0,0,0,0};	//List of the last 10 measurements of the vibrato distance meter
+int bufferList[10];												//empty helper list to help copy other lists
+double upperVibratoPercentage = 100;							// The upper boundary for the vibrato
+double lowerVibratoPercentage = 100;							// The lower boundary for the vibrato 
+double currentPercentage = 100;									// The current percentage of the target frequency, used for vibrato
+int goingLowToHigh = 1;											// Boolean, true: Vibrato frequency going up, false: vibrato frequency going down.
+int currentHertz = 0;											// The frequency of the currently sent signal
 
 //sets the buzzer high and low
 ISR (TIMER2_COMP_vect){
@@ -113,14 +113,21 @@ int returnDistance(int distance){
 	return value;
 }
 
-//Returns the frequency 
+/*
+Returns a frequency
+int value: the number of the key of a piano
+*/ 
 int returnFrequency(int value){
 	return (int)(pow(2, (double)(value - 49) / 12.0) * 440);
 }
 
+/*
+Converts a percentage from 0 - 100
+*/
 int percentageToKey(int percentage){
-	return 40 + (percentage/10); //range from key 40 to 50
+	return 40 + (percentage / 10); //range from key 40 to 50
 }
+
 
 void setVibratoRange(int vibrato_percentage){
 	int vibrato_range = (((100-vibrato_percentage)*MAX_VIBRATO)/100);
@@ -128,13 +135,16 @@ void setVibratoRange(int vibrato_percentage){
 	lowerVibratoPercentage = 100 - vibrato_range;
 }
 
+/*
+Calculates the frequency according to the current hertz value and vibrato amount and saves it in currentFrequency
+*/
 void calculateFrequency(){
 	
 	if(currentPercentage == upperVibratoPercentage && currentPercentage == lowerVibratoPercentage){
 		currentHertz = hertz_value;
 	}
 	if(goingLowToHigh){
-		
+		//signal going higher
 		if(currentPercentage >= upperVibratoPercentage){
 			goingLowToHigh = 0;
 		}
@@ -145,7 +155,7 @@ void calculateFrequency(){
 	else{
 		
 		if(currentPercentage <= lowerVibratoPercentage){
-			
+			//signal going lower
 			goingLowToHigh = 1;
 		}
 		else{
@@ -163,30 +173,32 @@ int main( void )
 	DDRD = 0xFF;				// set PORTD for output
 	DDRG = 0xFF;				// set PORTG for output
 	adcInit();					// initialize ADC
-	//lcd_init();					// initialize LCD
-	timersInit();
+	//lcd_init();				// initialize LCD
+	timersInit();				// initialize the timer
 
 	while (1){
 		PORTD = ADCH;
 		char hertz_buffer[20];
-		char vibrato_buffer1[20];
-		while(ADCSRA &BIT(6));
-		ADMUX ^= BIT(1);
-		ADCSRA |= BIT(6);
+		char vibrato_buffer[20];	/
+		while(ADCSRA &BIT(6));		//wait until ADC read has finished
+		ADMUX ^= BIT(1);			//toggle the bit change the ADC port in; Toggle between sensor 1 and 2
+		ADCSRA |= BIT(6);			//turn on the ADC reading
 		measuring ^= 1;
 		if (measuring){
-			hertz_percentage = returnDistance(140-ADCH);
-			addToList(average_percentages_hertz, hertz_percentage);
-			hertz_value = returnFrequency(percentageToKey( average_of_list(average_percentages_hertz)));
+			//logic for the frequency sensor
+			hertz_percentage = returnDistance(140-ADCH);											// convert sensor data to percentage
+			addToList(average_percentages_hertz, hertz_percentage);									// add to read value to list of the last 10 measurements
+			hertz_value = returnFrequency(percentageToKey( average_of_list(average_percentages_hertz))); //convert the average of the 10 last measurements to a frequency
 
 			sprintf(hertz_buffer, "Hertz: %i", currentHertz);
 			} else {
-			vibrato_percentage = returnDistance(140-ADCH);
-			addToList(average_percentages_vibrato, vibrato_percentage);
-			setVibratoRange(average_of_list( average_percentages_vibrato));
-			sprintf(vibrato_buffer1, "Vibrato: %i", average_of_list(average_percentages_vibrato));
+			//logic for the vibrato sensor
+			vibrato_percentage = returnDistance(140-ADCH);											// convert sensor data to percentage
+			addToList(average_percentages_vibrato, vibrato_percentage);								//add the sensor measurement to the list of the 10 last measurements
+			setVibratoRange(average_of_list( average_percentages_vibrato));							//convert the average of the list to a max and min frequency, i.e.the vibrato range
+			sprintf(vibrato_buffer, "Vibrato: %i", average_of_list(average_percentages_vibrato));
 			calculateFrequency();
-			OCR2 = (250000)/(2*currentHertz);
+			OCR2 = (250000)/(2*currentHertz);														//set the wait time for the clock
 		}
 		
 		
@@ -207,6 +219,8 @@ int main( void )
 		
 	}
 }
+
+//LCD helper functions
 
 void lcd_strobe_lcd_e(void) {
 	PORTA |= (1<<LCD_E);	// E high
