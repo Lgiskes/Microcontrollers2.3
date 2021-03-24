@@ -10,7 +10,8 @@
 #define BIT(x)	(1 << (x))
 #define LCD_E 	6  // RA6 UNI-6
 #define LCD_RS	4  // RA4 UNI-6
-#define MAX_VIBRATO 50
+#define MAX_VIBRATO 10
+#define VIBRATO_STEP_AMOUNT 0.01
 
 void lcd_strobe_lcd_e(void);
 void lcd_write_data(unsigned char byte);
@@ -19,6 +20,7 @@ void lcd_clear(void);
 void display_text(const char *str);
 void set_cursor(int position);
 void lcd_init(void);
+void calculateFrequency(void);
 
 int hertz_percentage;
 int vibrato_percentage;
@@ -38,8 +40,7 @@ ISR (TIMER2_COMP_vect){
 }
 
 
-
-void timer2Init( void ){
+void timersInit( void ){
 	OCR2 = 250;
 	TIMSK |= BIT(7);
 	sei();
@@ -127,27 +128,32 @@ void setVibratoRange(int vibrato_percentage){
 	lowerVibratoPercentage = 100 - vibrato_range;
 }
 
-int calculateFrequency(){
-	int frequencyNoVibrato = 2*hertz_value;
+void calculateFrequency(){
+	
 	if(currentPercentage == upperVibratoPercentage && currentPercentage == lowerVibratoPercentage){
-		currentHertz = frequencyNoVibrato;
-		return frequencyNoVibrato;
+		currentHertz = hertz_value;
 	}
 	if(goingLowToHigh){
-		currentPercentage += 0.1;
+		
 		if(currentPercentage >= upperVibratoPercentage){
 			goingLowToHigh = 0;
 		}
+		else{
+			currentPercentage += VIBRATO_STEP_AMOUNT;
+		}
 	}
 	else{
-		currentPercentage -= 0.1;
+		
 		if(currentPercentage <= lowerVibratoPercentage){
+			
 			goingLowToHigh = 1;
+		}
+		else{
+			currentPercentage -= VIBRATO_STEP_AMOUNT;
 		}
 	}
 	
-	currentHertz = frequencyNoVibrato*(currentPercentage/100.0);
-	return currentHertz;
+	currentHertz = hertz_value*(currentPercentage/100.0);
 }
 
 // Main program: ADC at PF1
@@ -158,7 +164,7 @@ int main( void )
 	DDRG = 0xFF;				// set PORTG for output
 	adcInit();					// initialize ADC
 	//lcd_init();					// initialize LCD
-	timer2Init();
+	timersInit();
 
 	while (1){
 		PORTD = ADCH;
@@ -179,8 +185,10 @@ int main( void )
 			addToList(average_percentages_vibrato, vibrato_percentage);
 			setVibratoRange(average_of_list( average_percentages_vibrato));
 			sprintf(vibrato_buffer1, "Vibrato: %i", average_of_list(average_percentages_vibrato));
+			calculateFrequency();
+			OCR2 = 250000/(2*currentHertz);
 		}
-		OCR2 = 250000/(calculateFrequency());
+		
 		
 		/*
 		lcd_clear();
