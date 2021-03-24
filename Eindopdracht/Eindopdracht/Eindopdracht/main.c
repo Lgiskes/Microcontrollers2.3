@@ -134,13 +134,13 @@ int calculateFrequency(){
 		return frequencyNoVibrato;
 	}
 	if(goingLowToHigh){
-		currentPercentage += 1;
+		currentPercentage += 0.1;
 		if(currentPercentage >= upperVibratoPercentage){
 			goingLowToHigh = 0;
 		}
 	}
 	else{
-		currentPercentage --;
+		currentPercentage -= 0.1;
 		if(currentPercentage <= lowerVibratoPercentage){
 			goingLowToHigh = 1;
 		}
