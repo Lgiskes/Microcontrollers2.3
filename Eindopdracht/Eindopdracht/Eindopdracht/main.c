@@ -10,6 +10,7 @@
 #define BIT(x)	(1 << (x))
 #define LCD_E 	6  // RA6 UNI-6
 #define LCD_RS	4  // RA4 UNI-6
+#define MAX_VIBRATO 50
 
 void lcd_strobe_lcd_e(void);
 void lcd_write_data(unsigned char byte);
@@ -24,11 +25,19 @@ int vibrato_percentage;
 int measuring = 0;
 int hertz_value;
 int average_percentages_hertz[10] = {0,0,0,0,0,0,0,0,0,0};
+int average_percentages_vibrato[10] = {0,0,0,0,0,0,0,0,0,0};
 int bufferList[10];
+double upperVibratoPercentage = 100;
+double lowerVibratoPercentage = 100;
+double currentPercentage = 100;
+int goingLowToHigh = 1;
+int currentHertz = 0;
 
 ISR (TIMER2_COMP_vect){
 	PORTG ^= BIT(0);
 }
+
+
 
 void timer2Init( void ){
 	OCR2 = 250;
@@ -36,6 +45,7 @@ void timer2Init( void ){
 	sei();
 	TCCR2 = 0b00001011;
 }
+
 
 void wait( int ms )
 {
@@ -111,6 +121,35 @@ int percentageToKey(int percentage){
 	return 30 + (percentage/5); //range from key 30 to 50
 }
 
+void setVibratoRange(int vibrato_percentage){
+	int vibrato_range = (((100-vibrato_percentage)*MAX_VIBRATO)/100);
+	upperVibratoPercentage = 100 + vibrato_range;
+	lowerVibratoPercentage = 100 - vibrato_range;
+}
+
+int calculateFrequency(){
+	int frequencyNoVibrato = 2*hertz_value;
+	if(currentPercentage == upperVibratoPercentage && currentPercentage == lowerVibratoPercentage){
+		currentHertz = frequencyNoVibrato;
+		return frequencyNoVibrato;
+	}
+	if(goingLowToHigh){
+		currentPercentage += 1;
+		if(currentPercentage >= upperVibratoPercentage){
+			goingLowToHigh = 0;
+		}
+	}
+	else{
+		currentPercentage --;
+		if(currentPercentage <= lowerVibratoPercentage){
+			goingLowToHigh = 1;
+		}
+	}
+	
+	currentHertz = frequencyNoVibrato*(currentPercentage/100.0);
+	return currentHertz;
+}
+
 // Main program: ADC at PF1
 int main( void )
 {
@@ -133,12 +172,16 @@ int main( void )
 			hertz_percentage = returnDistance(140-ADCH);
 			addToList(average_percentages_hertz, hertz_percentage);
 			hertz_value = returnFrequency(percentageToKey( average_of_list(average_percentages_hertz)));
-			OCR2 = 250000/(2*hertz_value);
-			sprintf(hertz_buffer, "Hertz: %i", hertz_value);
+
+			sprintf(hertz_buffer, "Hertz: %i", currentHertz);
 			} else {
 			vibrato_percentage = returnDistance(140-ADCH);
-			sprintf(vibrato_buffer1, "Distance: %i", vibrato_percentage);
+			addToList(average_percentages_vibrato, vibrato_percentage);
+			setVibratoRange(average_of_list( average_percentages_vibrato));
+			sprintf(vibrato_buffer1, "Vibrato: %i", average_of_list(average_percentages_vibrato));
 		}
+		OCR2 = 250000/(calculateFrequency());
+		
 		/*
 		lcd_clear();
 		wait(5);
@@ -151,6 +194,7 @@ int main( void )
 		display_text(hertz_buffer);
 		wait(250);
 		*/
+		
 		
 	}
 }
